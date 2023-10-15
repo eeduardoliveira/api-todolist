@@ -1,35 +1,38 @@
 package com.example.demo.domain.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 /**
  * @author eduardooliveira
  */
+
+// @Data faz parte da lib Lombok para utilizar Getter e Setter
+@Data
+@Entity(name = "tb_users")
 public class User {
 
-    String username;
-    String name;
-    String password;
+    @Id
+    @GeneratedValue(generator = "UUID")
+    private UUID id;
 
-    public String getUsername() {
-        return username;
-    }
+    @Column(name = "usuario", unique = true)
+    private String username;
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+    @Column(name = "nome")
+    private String name;
 
-    public String getName() {
-        return name;
-    }
+    @Column(name = "senha")
+    private String password;
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    @CreationTimestamp
+    private LocalDateTime created_at;
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
 }
