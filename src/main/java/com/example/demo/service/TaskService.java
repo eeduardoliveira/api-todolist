@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.domain.model.Task;
+import com.example.demo.domain.model.TaskStatus;
 import com.example.demo.domain.model.TaskUpd;
 import com.example.demo.domain.model.User;
 import com.example.demo.repository.ITaskRepository;
@@ -34,6 +35,12 @@ public class TaskService {
         User user = userService.getUserRepository().findById(idUser).orElseThrow();
         task.setIdUser(user.getId());
         
+        // Set default status if not provided
+        if (task.getStatus() == null) {
+            task.setStatus(TaskStatus.PENDING);
+            logger.debug("No status provided, defaulting to PENDING");
+        }
+        
         LocalDateTime currentDate = LocalDateTime.now();
         if (currentDate.isAfter(task.getStartAt()) || currentDate.isAfter(task.getEndAt())) {
             logger.warn("Task creation failed: Start or end date is before current date (User ID: {})", idUser);
@@ -46,8 +53,8 @@ public class TaskService {
         }
         
         Task savedTask = this.taskRepository.save(task);
-        logger.info("Task created successfully: ID={}, Title='{}', User ID={}", 
-                    savedTask.getId(), savedTask.getTitle(), idUser);
+        logger.info("Task created successfully: ID={}, Title='{}', User ID={}, Status={}", 
+                    savedTask.getId(), savedTask.getTitle(), idUser, savedTask.getStatus());
         logger.debug("Task details: {}", savedTask);
         
         return savedTask;
@@ -57,6 +64,13 @@ public class TaskService {
         logger.info("Listing all tasks for user ID: {}", idUser);
         List<Task> tasks = this.taskRepository.findAllByIdUser(idUser);
         logger.debug("Found {} task(s) for user ID: {}", tasks.size(), idUser);
+        return tasks;
+    }
+
+    public List<Task> listTaskByUserAndStatus(UUID idUser, TaskStatus status) {
+        logger.info("Listing tasks for user ID: {} with status: {}", idUser, status);
+        List<Task> tasks = this.taskRepository.findAllByIdUserAndStatus(idUser, status);
+        logger.debug("Found {} task(s) for user ID: {} with status: {}", tasks.size(), idUser, status);
         return tasks;
     }
 
@@ -72,11 +86,32 @@ public class TaskService {
         task.setEndAt(taskUpd.endAt());
         task.setPriority(taskUpd.priority());
         
+        if (taskUpd.status() != null) {
+            task.setStatus(taskUpd.status());
+            logger.debug("Updating task status to: {}", taskUpd.status());
+        }
+        
         Task updatedTask = this.taskRepository.save(task);
-        logger.info("Task updated successfully: ID={}, Title='{}'", updatedTask.getId(), updatedTask.getTitle());
+        logger.info("Task updated successfully: ID={}, Title='{}', Status={}", 
+                    updatedTask.getId(), updatedTask.getTitle(), updatedTask.getStatus());
         logger.debug("Updated task details: {}", updatedTask);
         
         return updatedTask;
+    }
+
+    public Task completeTask(UUID idTask) {
+        logger.info("Marking task as completed: ID={}", idTask);
+        
+        Task task = this.taskRepository.findById(idTask).orElseThrow();
+        logger.debug("Current task status: {}", task.getStatus());
+        
+        task.setStatus(TaskStatus.COMPLETED);
+        
+        Task completedTask = this.taskRepository.save(task);
+        logger.info("Task marked as completed successfully: ID={}", completedTask.getId());
+        logger.debug("Completed task details: {}", completedTask);
+        
+        return completedTask;
     }
     
     public void deleteTask(UUID idTask) {
