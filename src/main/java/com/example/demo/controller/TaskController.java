@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.domain.model.Task;
+import com.example.demo.domain.model.TaskStatistics;
 import com.example.demo.domain.model.TaskStatus;
 import com.example.demo.domain.model.TaskUpd;
 import com.example.demo.service.TaskService;
@@ -8,8 +9,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,6 +69,18 @@ public class TaskController {
         return tasks;
     }
 
+    @GetMapping(path = {"statistics"})
+    public TaskStatistics getStatistics(HttpServletRequest request) {
+        UUID idUser = (UUID) request.getAttribute("idUser");
+        logger.info("Received task statistics request from user ID: {}", idUser);
+        
+        TaskStatistics statistics = this.taskService.getTaskStatistics(idUser);
+        logger.info("Returning statistics for user ID: {} - PENDING: {}, IN_PROGRESS: {}, COMPLETED: {}, TOTAL: {}",
+                    idUser, statistics.pendingCount(), statistics.inProgressCount(), 
+                    statistics.completedCount(), statistics.totalCount());
+        
+        return statistics;
+    }
 
     @PutMapping(path = {"update-task/{idTask}"})
     public Task update(@RequestBody TaskUpd taskUpd, @PathVariable UUID idTask) throws Exception {
@@ -105,5 +120,43 @@ public class TaskController {
         
         this.taskService.deleteTask(idTask);
         logger.info("Task deleted successfully: ID={}", idTask);
+    }
+
+    // New search and filter endpoints for KAN-2
+
+    @GetMapping(path = {"search"})
+    public List<Task> search(@RequestParam String keyword, HttpServletRequest request) {
+        UUID idUser = (UUID) request.getAttribute("idUser");
+        logger.info("Received search tasks request from user ID: {}, keyword: '{}'", idUser, keyword);
+        
+        List<Task> tasks = this.taskService.searchTasks(idUser, keyword);
+        logger.info("Returning {} task(s) matching keyword '{}' for user ID: {}", tasks.size(), keyword, idUser);
+        
+        return tasks;
+    }
+
+    @GetMapping(path = {"filter-by-priority/{priority}"})
+    public List<Task> filterByPriority(@PathVariable String priority, HttpServletRequest request) {
+        UUID idUser = (UUID) request.getAttribute("idUser");
+        logger.info("Received filter by priority request from user ID: {}, priority: {}", idUser, priority);
+        
+        List<Task> tasks = this.taskService.filterTasksByPriority(idUser, priority);
+        logger.info("Returning {} task(s) with priority '{}' for user ID: {}", tasks.size(), priority, idUser);
+        
+        return tasks;
+    }
+
+    @GetMapping(path = {"filter-by-date-range"})
+    public List<Task> filterByDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+            HttpServletRequest request) {
+        UUID idUser = (UUID) request.getAttribute("idUser");
+        logger.info("Received filter by date range request from user ID: {}, start: {}, end: {}", idUser, start, end);
+        
+        List<Task> tasks = this.taskService.filterTasksByDateRange(idUser, start, end);
+        logger.info("Returning {} task(s) in date range for user ID: {}", tasks.size(), idUser);
+        
+        return tasks;
     }
 }
