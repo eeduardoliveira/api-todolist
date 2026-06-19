@@ -11,7 +11,9 @@ public record TaskUpd (
 
         LocalDateTime endAt,
 
-        String priority
+        String priority,
+
+        TaskStatus status
 ){
 
 }
