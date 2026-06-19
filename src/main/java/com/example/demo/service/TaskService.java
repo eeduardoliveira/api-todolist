@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.domain.model.Task;
+import com.example.demo.domain.model.TaskStatistics;
 import com.example.demo.domain.model.TaskStatus;
 import com.example.demo.domain.model.TaskUpd;
 import com.example.demo.domain.model.User;
@@ -72,6 +73,20 @@ public class TaskService {
         List<Task> tasks = this.taskRepository.findAllByIdUserAndStatus(idUser, status);
         logger.debug("Found {} task(s) for user ID: {} with status: {}", tasks.size(), idUser, status);
         return tasks;
+    }
+
+    public TaskStatistics getTaskStatistics(UUID idUser) {
+        logger.info("Calculating task statistics for user ID: {}", idUser);
+        
+        long pendingCount = this.taskRepository.findAllByIdUserAndStatus(idUser, TaskStatus.PENDING).size();
+        long inProgressCount = this.taskRepository.findAllByIdUserAndStatus(idUser, TaskStatus.IN_PROGRESS).size();
+        long completedCount = this.taskRepository.findAllByIdUserAndStatus(idUser, TaskStatus.COMPLETED).size();
+        long totalCount = this.taskRepository.findAllByIdUser(idUser).size();
+        
+        logger.info("Statistics for user ID {}: PENDING={}, IN_PROGRESS={}, COMPLETED={}, TOTAL={}",
+                    idUser, pendingCount, inProgressCount, completedCount, totalCount);
+        
+        return new TaskStatistics(pendingCount, inProgressCount, completedCount, totalCount);
     }
 
     public Task updateTask(TaskUpd taskUpd, UUID idTask) throws Exception {

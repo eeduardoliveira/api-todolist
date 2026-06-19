@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.domain.model.Task;
+import com.example.demo.domain.model.TaskStatistics;
 import com.example.demo.domain.model.TaskStatus;
 import com.example.demo.domain.model.TaskUpd;
 import com.example.demo.service.TaskService;
@@ -66,6 +67,18 @@ public class TaskController {
         return tasks;
     }
 
+    @GetMapping(path = {"statistics"})
+    public TaskStatistics getStatistics(HttpServletRequest request) {
+        UUID idUser = (UUID) request.getAttribute("idUser");
+        logger.info("Received task statistics request from user ID: {}", idUser);
+        
+        TaskStatistics statistics = this.taskService.getTaskStatistics(idUser);
+        logger.info("Returning statistics for user ID: {} - PENDING: {}, IN_PROGRESS: {}, COMPLETED: {}, TOTAL: {}",
+                    idUser, statistics.pendingCount(), statistics.inProgressCount(), 
+                    statistics.completedCount(), statistics.totalCount());
+        
+        return statistics;
+    }
 
     @PutMapping(path = {"update-task/{idTask}"})
     public Task update(@RequestBody TaskUpd taskUpd, @PathVariable UUID idTask) throws Exception {
