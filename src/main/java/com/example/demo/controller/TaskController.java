@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.domain.model.Task;
+import com.example.demo.domain.model.TaskStatus;
 import com.example.demo.domain.model.TaskUpd;
 import com.example.demo.service.TaskService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,10 +27,11 @@ public class TaskController {
     public Task create(@RequestBody Task task, HttpServletRequest request) {
         UUID idUser = (UUID) request.getAttribute("idUser");
         logger.info("Received create task request from user ID: {}", idUser);
-        logger.debug("Task creation request: title='{}', priority='{}'", task.getTitle(), task.getPriority());
+        logger.debug("Task creation request: title='{}', priority='{}', status='{}'", 
+                    task.getTitle(), task.getPriority(), task.getStatus());
         
         Task createdTask = this.taskService.createTask(task, idUser);
-        logger.info("Task created successfully: ID={}", createdTask.getId());
+        logger.info("Task created successfully: ID={}, status={}", createdTask.getId(), createdTask.getStatus());
         
         return createdTask;
     }
@@ -45,16 +47,56 @@ public class TaskController {
         return tasks;
     }
 
+    @GetMapping(path = {"list-task-by-status/{status}"})
+    public List<Task> listByStatus(@PathVariable String status, HttpServletRequest request) {
+        UUID idUser = (UUID) request.getAttribute("idUser");
+        logger.info("Received list tasks by status request from user ID: {}, status: {}", idUser, status);
+        
+        TaskStatus taskStatus;
+        try {
+            taskStatus = TaskStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid status value: {}", status);
+            throw new RuntimeException("Status inválido. Use: PENDING, IN_PROGRESS ou COMPLETED");
+        }
+        
+        List<Task> tasks = this.taskService.listTaskByUserAndStatus(idUser, taskStatus);
+        logger.info("Returning {} task(s) with status {} for user ID: {}", tasks.size(), taskStatus, idUser);
+        
+        return tasks;
+    }
+
 
     @PutMapping(path = {"update-task/{idTask}"})
     public Task update(@RequestBody TaskUpd taskUpd, @PathVariable UUID idTask) throws Exception {
         logger.info("Received update task request for task ID: {}", idTask);
-        logger.debug("Task update request: title='{}', priority='{}'", taskUpd.title(), taskUpd.priority());
+        logger.debug("Task update request: title='{}', priority='{}', status='{}'", 
+                    taskUpd.title(), taskUpd.priority(), taskUpd.status());
         
         Task updatedTask = this.taskService.updateTask(taskUpd, idTask);
-        logger.info("Task updated successfully: ID={}", idTask);
+        logger.info("Task updated successfully: ID={}, status={}", idTask, updatedTask.getStatus());
         
         return updatedTask;
+    }
+
+    @PatchMapping(path = {"start-task/{idTask}"})
+    public Task start(@PathVariable UUID idTask) {
+        logger.info("Received start task request for task ID: {}", idTask);
+        
+        Task startedTask = this.taskService.startTask(idTask);
+        logger.info("Task marked as IN_PROGRESS successfully: ID={}", idTask);
+        
+        return startedTask;
+    }
+
+    @PatchMapping(path = {"complete-task/{idTask}"})
+    public Task complete(@PathVariable UUID idTask) {
+        logger.info("Received complete task request for task ID: {}", idTask);
+        
+        Task completedTask = this.taskService.completeTask(idTask);
+        logger.info("Task marked as completed successfully: ID={}", idTask);
+        
+        return completedTask;
     }
 
     @DeleteMapping(path = {"delete-task/{idTask}"})
