@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.domain.model.Task;
+import com.example.demo.domain.model.TaskStatistics;
 import com.example.demo.domain.model.TaskStatus;
 import com.example.demo.domain.model.TaskUpd;
 import com.example.demo.domain.model.User;
@@ -74,6 +75,20 @@ public class TaskService {
         return tasks;
     }
 
+    public TaskStatistics getTaskStatistics(UUID idUser) {
+        logger.info("Calculating task statistics for user ID: {}", idUser);
+        
+        long pendingCount = this.taskRepository.findAllByIdUserAndStatus(idUser, TaskStatus.PENDING).size();
+        long inProgressCount = this.taskRepository.findAllByIdUserAndStatus(idUser, TaskStatus.IN_PROGRESS).size();
+        long completedCount = this.taskRepository.findAllByIdUserAndStatus(idUser, TaskStatus.COMPLETED).size();
+        long totalCount = this.taskRepository.findAllByIdUser(idUser).size();
+        
+        logger.info("Statistics for user ID {}: PENDING={}, IN_PROGRESS={}, COMPLETED={}, TOTAL={}",
+                    idUser, pendingCount, inProgressCount, completedCount, totalCount);
+        
+        return new TaskStatistics(pendingCount, inProgressCount, completedCount, totalCount);
+    }
+
     public Task updateTask(TaskUpd taskUpd, UUID idTask) throws Exception {
         logger.info("Updating task ID: {}", idTask);
         
@@ -133,5 +148,56 @@ public class TaskService {
         logger.info("Deleting task ID: {}", idTask);
         this.taskRepository.deleteById(idTask);
         logger.info("Task deleted successfully: ID={}", idTask);
+    }
+
+    // New search and filter methods for KAN-2
+    
+    public List<Task> searchTasks(UUID idUser, String keyword) {
+        logger.info("Searching tasks for user ID: {} with keyword: '{}'", idUser, keyword);
+        
+        if (keyword == null || keyword.trim().isEmpty()) {
+            logger.warn("Empty search keyword provided, returning all tasks for user ID: {}", idUser);
+            return this.taskRepository.findAllByIdUser(idUser);
+        }
+        
+        List<Task> tasks = this.taskRepository.searchByKeyword(idUser, keyword.trim());
+        logger.info("Search found {} task(s) for user ID: {} with keyword: '{}'", tasks.size(), idUser, keyword);
+        
+        return tasks;
+    }
+    
+    public List<Task> filterTasksByPriority(UUID idUser, String priority) {
+        logger.info("Filtering tasks for user ID: {} by priority: {}", idUser, priority);
+        
+        if (priority == null || priority.trim().isEmpty()) {
+            logger.warn("Empty priority provided, returning all tasks for user ID: {}", idUser);
+            return this.taskRepository.findAllByIdUser(idUser);
+        }
+        
+        List<Task> tasks = this.taskRepository.findAllByIdUserAndPriority(idUser, priority);
+        logger.info("Filter found {} task(s) for user ID: {} with priority: {}", tasks.size(), idUser, priority);
+        
+        return tasks;
+    }
+    
+    public List<Task> filterTasksByDateRange(UUID idUser, LocalDateTime startDate, LocalDateTime endDate) {
+        logger.info("Filtering tasks for user ID: {} by date range: {} to {}", idUser, startDate, endDate);
+        
+        if (startDate == null || endDate == null) {
+            logger.warn("Invalid date range provided, returning all tasks for user ID: {}", idUser);
+            return this.taskRepository.findAllByIdUser(idUser);
+        }
+        
+        if (startDate.isAfter(endDate)) {
+            logger.warn("Start date is after end date for user ID: {}, swapping dates", idUser);
+            LocalDateTime temp = startDate;
+            startDate = endDate;
+            endDate = temp;
+        }
+        
+        List<Task> tasks = this.taskRepository.findAllByIdUserAndDateRange(idUser, startDate, endDate);
+        logger.info("Filter found {} task(s) for user ID: {} in date range", tasks.size(), idUser);
+        
+        return tasks;
     }
 }
